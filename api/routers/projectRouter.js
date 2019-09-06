@@ -27,7 +27,7 @@ projectRouter.get('/', (req, res) => {
         })
 });
 
-projectRouter.get('/:id', (req, res) => {
+projectRouter.get('/:id', validateProjectID, (req, res) => {
     const { id } = req.params;
     db.get(id)
         .then(project => {
@@ -36,46 +36,57 @@ projectRouter.get('/:id', (req, res) => {
         .catch(() => {
             res.status(500).json({ error: 'Internal server error' });
         })
-})
-
+});
 
 // UPDATE
-projectRouter.put('/:id', (req, res) => {
+projectRouter.put('/:id', validateProjectBody, (req, res) => {
     const { id } = req.params;
     const content = req.body;
-    if (!content.name || !content.description) {
-        res.status(400).json({ error:  'Please include a "name" string and "description" string with your PUT request' })
-    }
+
     db.update(id, content)
-    .then(suc => {
-        res.status(201).json(suc)
+        .then(suc => {
+            res.status(202).json(suc);
         })
         .catch(() => {
-            res.status(500).json({ error: 'Internal server error' })
+            res.status(500).json({ error: 'Internal server error' });
         })
-    });
+});
     
-    
-    // DELETE
-    projectRouter.delete('/:id', (req, res) => {
-        const { id } = req.params;
-        db.remove(id)
+// DELETE
+projectRouter.delete('/:id', validateProjectID, (req, res) => {
+    const { id } = req.params;
+
+    db.remove(id)
         .then(suc => {
             res.status(200).json(suc);
         })
         .catch(() => {
             res.status(500).json({ error: 'Internal server error' });
         })
-    });
-        
-    // Middleware
-    function validateProjectBody(req, res, next) {
-        if (req.body.name === undefined || req.body.description === undefined) {
-            res.status(400).json({ error: 'Please include a "name" string, "description" string, and "completed" boolean with your POST request' })
-        } else {
-            next();
-        }
+});
+    
+// Middleware
+function validateProjectBody(req, res, next) {
+    if (req.body.name === undefined || req.body.description === undefined) {
+        res.status(400).json({ error: 'Please include a "name" string, "description" string, and "completed" boolean with your POST request' })
+    } else {
+        next();
     }
+};
+
+function validateProjectID(req, res, next) {
+    db.get(req.params.id) 
+        .then(suc => {
+            if (suc) {
+                next();
+            } else {
+                res.status(400).json({ error: 'Invalid project ID' });
+            }
+        })
+        .catch(() => {
+            res.status(500).json({ error: 'Internal server error' });
+        })
+};
     
     module.exports = projectRouter;
     

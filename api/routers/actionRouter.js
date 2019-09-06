@@ -27,51 +27,65 @@ actionRouter.get('/', (req, res) => {
         })
 });
 
-actionRouter.get('/:id', (req, res) => {
-    const { id } = req.params;
-    projectsdb.getProjectActions(id)
+actionRouter.get('/:project_id', (req, res) => {
+    const { project_id } = req.params;
+
+    projectsdb.getProjectActions(project_id)
         .then(actions => {
-            res.status(200).json(actions)
+            res.status(200).json(actions);
         })
         .catch(() => {
-            res.status(500).json({ error: 'Internal server error' })
+            res.status(500).json({ error: 'Internal server error' });
         })
 });
 
 // UPDATE
-actionRouter.put('/:id', validateActionBody, (req, res) => {
+actionRouter.put('/:id', (req, res) => {
     const { id } = req.params;
     const content = req.body;
 
     db.update(id, content)
         .then(suc => {
-            res.status(200).json(suc)
+            res.status(202).json(suc);
         })
         .catch(() => {
-            res.status(500).json({ error: 'Internal server error' })
+            res.status(500).json({ error: 'Internal server error' });
         })
-})
+});
 
 // DELETE
-actionRouter.delete('/:id', (req, res) => {
+actionRouter.delete('/:id', validateActionId, (req, res) => {
     const { id } = req.params;
     db.remove(id)
-        .then(suc => {
-            res.status(204).send(`Successfully deleted the action with the ID: ${id}`)
+        .then(() => {
+            res.status(204).send(`Successfully deleted the action with the ID: ${id}`);
         })
         .catch(() => {
-            res.status(500).json({ error: 'Internal server error' })
+            res.status(500).json({ error: 'Internal server error' });
         })
-})
+});
 
 // Middleware
 function validateActionBody(req, res, next) {
     if (req.body.notes === undefined || req.body.description === undefined || req.body.project_id === undefined) {
-        res.status(400).json({ error: 'Please include a "notes" string, "description" string, and "completed" boolean with your POST request' })
+        res.status(400).json({ error: 'Please include a "notes" string, "description" string, and "completed" boolean with your POST request' });
     } else {
         next();
     }
-}
+};
 
+function validateActionId(req, res, next) {
+    db.get(req.params.id)
+        .then(suc => {
+            if (suc) {
+                next();
+            } else {
+                res.status(400).json({ error: 'Invalid action Id' });
+            }
+        })
+        .catch(() => {
+            res.status(500).json({ error: 'Internal server error' });
+        })
+};
 
 module.exports = actionRouter;
